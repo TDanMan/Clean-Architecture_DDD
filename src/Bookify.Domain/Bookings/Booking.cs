@@ -1,5 +1,6 @@
 ﻿using Bookify.Domain.Abstractions;
-using Bookify.Domain.Apartments;
+using Bookify.Domain.Bookings.Events;
+using Bookify.Domain.Shared;
 
 namespace Bookify.Domain.Bookings;
 public sealed class Booking : Entity
@@ -15,10 +16,10 @@ public sealed class Booking : Entity
         Money totalPrice,
         BookingStatus status,
         DateTime createdOnUtc,
-        DateTime? confirmedOnUtc,
-        DateTime? rejectedOnUtc,
-        DateTime? completedOnUtc,
-        DateTime? cancelledOnUtc)
+        DateTime? confirmedOnUtc = null,
+        DateTime? rejectedOnUtc = null,
+        DateTime? completedOnUtc = null,
+        DateTime? cancelledOnUtc = null)
         : base(id)
     {
         ApartmentId = apartmentId;
@@ -50,11 +51,25 @@ public sealed class Booking : Entity
     public DateTime? CompletedOnUtc { get; private set; }
     public DateTime? CancelledOnUtc { get; private set; }
     public static Booking Reserve(
-        Guid apartmendId,
+        Guid apartmentId,
         Guid userId,
         DateRange duration,
-        DateTime utcNow)
+        DateTime utcNow,
+        PricingDetails pricingDetails)
     {
-        Booking booking = new(id, apartmentId, userId, duration)
+        Booking booking = new(
+            Guid.CreateVersion7(),
+            apartmentId,
+            userId,
+            duration,
+            pricingDetails.PriceForPeriod,
+            pricingDetails.CleaningFee,
+            pricingDetails.AmenitiesUpCharge,
+            pricingDetails.TotalPrice,
+            BookingStatus.Reserved,
+            utcNow);
+        booking.RaiseDomainEvent(new BookingReservedDomainEvent(booking.Id));
+
+        return booking;
     }
 }
